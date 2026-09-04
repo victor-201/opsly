@@ -1,0 +1,518 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                  String           @id @default(uuid()) @db.Uuid
+  email               String           @unique @db.VarChar(255)
+  passwordHash        String           @map("password_hash") @db.VarChar(255)
+  name                String           @db.VarChar(255)
+  emailVerified       Boolean          @default(false) @map("email_verified")
+  locked              Boolean          @default(false)
+  lockedUntil         DateTime?        @map("locked_until") @db.Timestamptz()
+  failedLoginAttempts Int              @default(0) @map("failed_login_attempts")
+  createdAt           DateTime         @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt           DateTime         @updatedAt @map("updated_at") @db.Timestamptz()
+
+  refreshTokens       RefreshToken[]
+  passwordResetTokens PasswordResetToken[]
+  memberships         Membership[]
+  chatSessions        ChatSession[]
+  notifications       Notification[]
+  incidentNotes       IncidentNote[]
+  auditLogs           AuditLog[]        @relation("AuditActor")
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id           String    @id @default(uuid()) @db.Uuid
+  userId       String    @map("user_id") @db.Uuid
+  tokenHash    String    @map("token_hash") @db.VarChar(255)
+  expiresAt    DateTime  @map("expires_at") @db.Timestamptz()
+  revoked      Boolean   @default(false)
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+model PasswordResetToken {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  tokenHash String   @map("token_hash") @db.VarChar(255)
+  expiresAt DateTime @map("expires_at") @db.Timestamptz()
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("password_reset_tokens")
+}
+
+model Organization {
+  id        String                @id @default(uuid()) @db.Uuid
+  name      String                @db.VarChar(255)
+  slug      String                @unique @db.VarChar(255)
+  settings  Json                  @default("{}")
+  deletedAt DateTime?             @map("deleted_at") @db.Timestamptz()
+  createdAt DateTime              @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt DateTime              @updatedAt @map("updated_at") @db.Timestamptz()
+
+  memberships         Membership[]
+  providerConnections ProviderConnection[]
+  resources           Resource[]
+  applications        Application[]
+  resourceRelations   ResourceRelation[]
+  deployments         Deployment[]
+  domains             Domain[]
+  healthChecks        HealthCheck[]
+  metricPoints        MetricPoint[]
+  logs                Log[]
+  alerts              Alert[]
+  incidents           Incident[]
+  auditLogs           AuditLog[]
+  chatSessions        ChatSession[]
+  syncJobs            SyncJob[]
+  notifications       Notification[]
+
+  @@map("organizations")
+}
+
+model Membership {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  userId         String   @map("user_id") @db.Uuid
+  role           String   @db.VarChar(20)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userId])
+  @@index([organizationId])
+  @@index([userId])
+  @@map("memberships")
+}
+
+model ProviderConnection {
+  id               String    @id @default(uuid()) @db.Uuid
+  organizationId   String    @map("organization_id") @db.Uuid
+  name             String    @db.VarChar(255)
+  providerType     String    @map("provider_type") @db.VarChar(50)
+  status           String    @default("pending") @db.VarChar(20)
+  lastSyncAt       DateTime? @map("last_sync_at") @db.Timestamptz()
+  lastSyncError    String?   @map("last_sync_error")
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz()
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  credentials  Credential[]
+  resources    Resource[]
+  syncJobs     SyncJob[]
+
+  @@index([organizationId])
+  @@index([providerType])
+  @@map("provider_connections")
+}
+
+model Credential {
+  id                   String   @id @default(uuid()) @db.Uuid
+  providerConnectionId String   @map("provider_connection_id") @db.Uuid
+  encryptedData        Bytes    @map("encrypted_data")
+  iv                   Bytes
+  authTag              Bytes
+  createdAt            DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt            DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+
+  providerConnection ProviderConnection @relation(fields: [providerConnectionId], references: [id], onDelete: Cascade)
+
+  @@index([providerConnectionId])
+  @@map("credentials")
+}
+
+model Resource {
+  id                     String   @id @default(uuid()) @db.Uuid
+  organizationId         String   @map("organization_id") @db.Uuid
+  providerConnectionId   String   @map("provider_connection_id") @db.Uuid
+  provider               String   @db.VarChar(50)
+  providerResourceId     String   @map("provider_resource_id") @db.VarChar(255)
+  type                   String   @db.VarChar(100)
+  name                   String   @db.VarChar(255)
+  region                 String?  @db.VarChar(100)
+  environment            String?  @db.VarChar(100)
+  repository             String?  @db.VarChar(500)
+  branch                 String?  @db.VarChar(255)
+  domain                 String?  @db.VarChar(255)
+  status                 String   @default("active") @db.VarChar(50)
+  providerUrl            String?  @map("provider_url") @db.VarChar(500)
+  capabilities           Json     @default("{}")
+  metadata               Json     @default("{}")
+  lastSyncAt             DateTime? @map("last_sync_at") @db.Timestamptz()
+  deletedAt              DateTime? @map("deleted_at") @db.Timestamptz()
+  createdAt              DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt              DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+
+  organization       Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  providerConnection ProviderConnection  @relation(fields: [providerConnectionId], references: [id], onDelete: Cascade)
+  applicationResources ApplicationResource[]
+  sourceRelations     ResourceRelation[]  @relation("SourceResource")
+  targetRelations     ResourceRelation[]  @relation("TargetResource")
+  deployments         Deployment[]
+  domains             Domain[]
+  metricPoints        MetricPoint[]
+  logs                Log[]
+
+  @@unique([providerConnectionId, providerResourceId])
+  @@index([organizationId])
+  @@index([providerConnectionId])
+  @@index([provider])
+  @@index([type])
+  @@index([status])
+  @@map("resources")
+}
+
+model Application {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  name           String   @db.VarChar(255)
+  description    String?
+  metadata       Json     @default("{}")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+
+  organization       Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  applicationResources ApplicationResource[]
+  domains            Domain[]
+
+  @@index([organizationId])
+  @@map("applications")
+}
+
+model ApplicationResource {
+  id            String   @id @default(uuid()) @db.Uuid
+  applicationId String   @map("application_id") @db.Uuid
+  resourceId    String   @map("resource_id") @db.Uuid
+  role          String   @default("unspecified") @db.VarChar(100)
+  confidence    Decimal  @default(1.0) @db.Decimal(3, 2)
+  source        String   @default("user_confirmed") @db.VarChar(50)
+  confirmed     Boolean  @default(true)
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  resource    Resource    @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+
+  @@unique([applicationId, resourceId])
+  @@index([applicationId])
+  @@index([resourceId])
+  @@map("application_resources")
+}
+
+model ResourceRelation {
+  id               String   @id @default(uuid()) @db.Uuid
+  organizationId   String   @map("organization_id") @db.Uuid
+  sourceResourceId String   @map("source_resource_id") @db.Uuid
+  targetResourceId String   @map("target_resource_id") @db.Uuid
+  type             String   @db.VarChar(100)
+  confidence       Decimal  @default(1.0) @db.Decimal(3, 2)
+  source           String   @default("inferred") @db.VarChar(50)
+  confirmed        Boolean  @default(false)
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  sourceResource Resource     @relation("SourceResource", fields: [sourceResourceId], references: [id], onDelete: Cascade)
+  targetResource Resource     @relation("TargetResource", fields: [targetResourceId], references: [id], onDelete: Cascade)
+
+  @@unique([sourceResourceId, targetResourceId, type])
+  @@index([organizationId])
+  @@index([sourceResourceId])
+  @@index([targetResourceId])
+  @@map("resource_relations")
+}
+
+model Deployment {
+  id                    String    @id @default(uuid()) @db.Uuid
+  organizationId        String    @map("organization_id") @db.Uuid
+  resourceId            String    @map("resource_id") @db.Uuid
+  status                String    @default("building") @db.VarChar(50)
+  commitSha             String?   @map("commit_sha") @db.VarChar(40)
+  branch                String?   @db.VarChar(255)
+  metadata              Json      @default("{}")
+  providerDeploymentId  String?   @map("provider_deployment_id") @db.VarChar(255)
+  startedAt             DateTime  @default(now()) @map("started_at") @db.Timestamptz()
+  finishedAt            DateTime? @map("finished_at") @db.Timestamptz()
+  createdAt             DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  resource     Resource     @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([resourceId])
+  @@index([status])
+  @@map("deployments")
+}
+
+model Domain {
+  id             String    @id @default(uuid()) @db.Uuid
+  organizationId String    @map("organization_id") @db.Uuid
+  resourceId     String?   @map("resource_id") @db.Uuid
+  applicationId  String?   @map("application_id") @db.Uuid
+  name           String    @db.VarChar(255)
+  verified       Boolean   @default(false)
+  ssl            Boolean   @default(false)
+  expiresAt      DateTime? @map("expires_at") @db.Timestamptz()
+  dnsRecords     Json      @default("[]") @map("dns_records")
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz()
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  resource     Resource?    @relation(fields: [resourceId], references: [id], onDelete: SetNull)
+  application  Application? @relation(fields: [applicationId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([name])
+  @@map("domains")
+}
+
+model HealthCheck {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  entityType     String   @map("entity_type") @db.VarChar(50)
+  entityId       String   @map("entity_id") @db.Uuid
+  health         String   @db.VarChar(30)
+  evidence       Json     @default("[]")
+  checkedAt      DateTime @default(now()) @map("checked_at") @db.Timestamptz()
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([entityType, entityId])
+  @@index([organizationId])
+  @@index([checkedAt])
+  @@map("health_checks")
+}
+
+model MetricPoint {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  resourceId     String   @map("resource_id") @db.Uuid
+  metric         String   @db.VarChar(100)
+  value          Float
+  unit           String?  @db.VarChar(50)
+  source         String?  @db.VarChar(100)
+  recordedAt     DateTime @map("recorded_at") @db.Timestamptz()
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  resource     Resource     @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+
+  @@index([resourceId])
+  @@index([metric])
+  @@index([recordedAt])
+  @@map("metric_points")
+}
+
+model Log {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  resourceId     String   @map("resource_id") @db.Uuid
+  level          String   @db.VarChar(20)
+  message        String
+  metadata       Json     @default("{}")
+  source         String?  @db.VarChar(100)
+  recordedAt     DateTime @map("recorded_at") @db.Timestamptz()
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  resource     Resource     @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+
+  @@index([resourceId])
+  @@index([level])
+  @@index([recordedAt])
+  @@map("logs")
+}
+
+model Alert {
+  id                 String    @id @default(uuid()) @db.Uuid
+  organizationId     String    @map("organization_id") @db.Uuid
+  name               String    @db.VarChar(255)
+  condition          String    @db.VarChar(100)
+  threshold          Float?
+  scope              Json      @default("{}")
+  enabled            Boolean   @default(true)
+  status             String    @default("inactive") @db.VarChar(20)
+  lastTriggeredAt    DateTime? @map("last_triggered_at") @db.Timestamptz()
+  lastAcknowledgedAt DateTime? @map("last_acknowledged_at") @db.Timestamptz()
+  lastResolvedAt     DateTime? @map("last_resolved_at") @db.Timestamptz()
+  createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt          DateTime  @updatedAt @map("updated_at") @db.Timestamptz()
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([enabled])
+  @@index([status])
+  @@map("alerts")
+}
+
+model Incident {
+  id                String   @id @default(uuid()) @db.Uuid
+  organizationId    String   @map("organization_id") @db.Uuid
+  title             String   @db.VarChar(255)
+  description       String?
+  status            String   @default("detected") @db.VarChar(20)
+  severity          String   @default("medium") @db.VarChar(20)
+  affectedResources Json     @default("[]") @map("affected_resources")
+  timeline          Json     @default("[]")
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt         DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+
+  organization Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  notes        IncidentNote[]
+
+  @@index([organizationId])
+  @@index([status])
+  @@index([severity])
+  @@map("incidents")
+}
+
+model IncidentNote {
+  id         String   @id @default(uuid()) @db.Uuid
+  incidentId String   @map("incident_id") @db.Uuid
+  authorId   String   @map("author_id") @db.Uuid
+  content    String
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  incident Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  author   User     @relation(fields: [authorId], references: [id])
+
+  @@index([incidentId])
+  @@map("incident_notes")
+}
+
+model AuditLog {
+  id             String    @id @default(uuid()) @db.Uuid
+  organizationId String    @map("organization_id") @db.Uuid
+  actorId        String?   @map("actor_id") @db.Uuid
+  actorEmail     String?   @map("actor_email") @db.VarChar(255)
+  action         String    @db.VarChar(100)
+  resourceType   String?   @map("resource_type") @db.VarChar(100)
+  resourceId     String?   @map("resource_id") @db.Uuid
+  details        Json      @default("{}")
+  ipAddress      String?   @map("ip_address") @db.VarChar(45)
+  userAgent      String?   @map("user_agent")
+  result         String    @default("success") @db.VarChar(20)
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  actor        User?        @relation("AuditActor", fields: [actorId], references: [id])
+
+  @@index([organizationId])
+  @@index([actorId])
+  @@index([action])
+  @@index([createdAt])
+  @@index([resourceType, resourceId])
+  @@map("audit_logs")
+}
+
+model ChatSession {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  userId         String   @map("user_id") @db.Uuid
+  title          String?  @db.VarChar(255)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id])
+  messages     ChatMessage[]
+  aiToolCalls  AiToolCall[]
+
+  @@index([organizationId])
+  @@index([userId])
+  @@map("chat_sessions")
+}
+
+model ChatMessage {
+  id        String   @id @default(uuid()) @db.Uuid
+  sessionId String   @map("session_id") @db.Uuid
+  role      String   @db.VarChar(20)
+  content   String
+  tools     Json     @default("[]")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  session    ChatSession  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  aiToolCalls AiToolCall[]
+
+  @@index([sessionId])
+  @@map("chat_messages")
+}
+
+model AiToolCall {
+  id        String   @id @default(uuid()) @db.Uuid
+  sessionId String   @map("session_id") @db.Uuid
+  messageId String   @map("message_id") @db.Uuid
+  toolName  String   @map("tool_name") @db.VarChar(100)
+  arguments Json     @default("{}")
+  result    Json     @default("{}")
+  durationMs Int?    @map("duration_ms")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  session ChatSession  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  message ChatMessage  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@index([messageId])
+  @@map("ai_tool_calls")
+}
+
+model SyncJob {
+  id                     String    @id @default(uuid()) @db.Uuid
+  organizationId         String    @map("organization_id") @db.Uuid
+  providerConnectionId   String    @map("provider_connection_id") @db.Uuid
+  status                 String    @default("queued") @db.VarChar(20)
+  resourcesDiscovered    Int       @default(0) @map("resources_discovered")
+  resourcesUpdated       Int       @default(0) @map("resources_updated")
+  resourcesDeleted       Int       @default(0) @map("resources_deleted")
+  errors                 Json      @default("[]")
+  startedAt              DateTime? @map("started_at") @db.Timestamptz()
+  completedAt            DateTime? @map("completed_at") @db.Timestamptz()
+  createdAt              DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+
+  organization     Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  providerConnection ProviderConnection @relation(fields: [providerConnectionId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([providerConnectionId])
+  @@index([status])
+  @@map("sync_jobs")
+}
+
+model Notification {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  userId         String   @map("user_id") @db.Uuid
+  type           String   @db.VarChar(50)
+  title          String   @db.VarChar(255)
+  message        String
+  read           Boolean  @default(false)
+  metadata       Json     @default("{}")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([organizationId])
+  @@index([userId, read])
+  @@map("notifications")
+}

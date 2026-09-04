@@ -1,0 +1,22 @@
+{
+  "name": "opsly",
+  "private": true,
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "typecheck": "turbo typecheck",
+    "test": "turbo test",
+    "test:unit": "turbo test:unit",
+    "test:integration": "turbo test:integration",
+    "db:migrate": "pnpm --filter @opsly/database exec prisma migrate dev",
+    "db:deploy": "pnpm --filter @opsly/database exec prisma migrate deploy",
+    "db:generate": "pnpm --filter @opsly/database exec prisma generate",
+    "db:seed": "pnpm --filter @opsly/database exec prisma db seed",
+    "db:studio": "pnpm --filter @opsly/database exec prisma studio"
+  },
+  "devDependencies": {
+    "turbo": "^2.0.0"
+  },
+  "packageManager": "pnpm@9.15.0"
+}
