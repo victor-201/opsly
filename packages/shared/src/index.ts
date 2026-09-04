@@ -22,7 +22,8 @@ export interface ApiError {
   };
 }
 
-export type ProviderType = 'render' | 'cloudflare' | 'neon' | 'upstash' | 'mongodb-atlas';
+export const PROVIDER_TYPES = ['render', 'cloudflare', 'neon', 'upstash', 'mongodb-atlas'] as const;
+export type ProviderType = (typeof PROVIDER_TYPES)[number];
 
 export type HealthState =
   | 'healthy'
