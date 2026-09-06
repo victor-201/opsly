@@ -12,19 +12,25 @@ export class MonitoringService {
   async checkStaleResources() {
     this.logger.debug('Checking for stale resources');
 
-    const staleThreshold = new Date(Date.now() - 30 * 60 * 1000);
+    try {
+      const staleThreshold = new Date(Date.now() - 30 * 60 * 1000);
 
-    const staleResources = await this.prisma.resource.findMany({
-      where: {
-        lastSyncAt: { lt: staleThreshold },
-        status: { not: 'inactive' },
-        deletedAt: null,
-      },
-      select: { id: true, name: true, lastSyncAt: true },
-    });
+      const staleResources = await this.prisma.resource.findMany({
+        where: {
+          lastSyncAt: { lt: staleThreshold },
+          status: { not: 'inactive' },
+          deletedAt: null,
+        },
+        select: { id: true, name: true, lastSyncAt: true },
+      });
 
-    if (staleResources.length > 0) {
-      this.logger.warn(`Found ${staleResources.length} stale resources`);
+      if (staleResources.length > 0) {
+        this.logger.warn(`Found ${staleResources.length} stale resources`);
+      }
+    } catch (error) {
+      this.logger.error(
+        `Stale resource check failed: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
   }
 
@@ -32,37 +38,43 @@ export class MonitoringService {
   async evaluateAlertConditions() {
     this.logger.debug('Evaluating alert conditions');
 
-    const resources = await this.prisma.resource.findMany({
-      where: {
-        status: { in: ['error', 'degraded'] },
-        deletedAt: null,
-      },
-    });
-
-    for (const resource of resources) {
-      const existingAlert = await this.prisma.alert.findFirst({
+    try {
+      const resources = await this.prisma.resource.findMany({
         where: {
-          organizationId: resource.organizationId,
-          scope: { path: ['resourceId'], equals: resource.id },
-          status: { in: ['active'] },
+          status: { in: ['error', 'degraded'] },
+          deletedAt: null,
         },
       });
 
-      if (!existingAlert) {
-        await this.prisma.alert.create({
-          data: {
+      for (const resource of resources) {
+        const existingAlert = await this.prisma.alert.findFirst({
+          where: {
             organizationId: resource.organizationId,
-            name: `Resource ${resource.name} is ${resource.status}`,
-            condition: 'resource_status',
-            scope: {
-              resourceId: resource.id,
-              expectedStatus: 'active',
-              currentStatus: resource.status,
-            },
-            status: 'active',
+            scope: { path: ['resourceId'], equals: resource.id },
+            status: { in: ['active'] },
           },
         });
+
+        if (!existingAlert) {
+          await this.prisma.alert.create({
+            data: {
+              organizationId: resource.organizationId,
+              name: `Resource ${resource.name} is ${resource.status}`,
+              condition: 'resource_status',
+              scope: {
+                resourceId: resource.id,
+                expectedStatus: 'active',
+                currentStatus: resource.status,
+              },
+              status: 'active',
+            },
+          });
+        }
       }
+    } catch (error) {
+      this.logger.error(
+        `Alert evaluation failed: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
   }
 

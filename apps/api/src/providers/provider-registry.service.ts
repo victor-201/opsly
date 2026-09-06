@@ -1,10 +1,32 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, OnModuleInit } from '@nestjs/common';
 import { ProviderType } from '@opsly/shared';
-import { ProviderAdapter, ProviderCapabilities } from '@opsly/provider-core';
+import {
+  ProviderAdapter,
+  ProviderCapabilities,
+  RenderAdapter,
+  CloudflarePagesAdapter,
+  NeonAdapter,
+  UpstashAdapter,
+  MongoAtlasAdapter,
+} from '@opsly/provider-core';
 
 @Injectable()
-export class ProviderRegistry {
+export class ProviderRegistry implements OnModuleInit {
   private adapters = new Map<ProviderType, ProviderAdapter>();
+
+  onModuleInit() {
+    const typeToAdapter: Record<ProviderType, ProviderAdapter> = {
+      render: new RenderAdapter(),
+      cloudflare: new CloudflarePagesAdapter(),
+      neon: new NeonAdapter(),
+      upstash: new UpstashAdapter(),
+      'mongodb-atlas': new MongoAtlasAdapter(),
+    };
+
+    for (const [type, adapter] of Object.entries(typeToAdapter)) {
+      this.register(type as ProviderType, adapter);
+    }
+  }
 
   register(type: ProviderType, adapter: ProviderAdapter) {
     this.adapters.set(type, adapter);

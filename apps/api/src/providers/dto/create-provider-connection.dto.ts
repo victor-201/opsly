@@ -1,4 +1,4 @@
-import { IsString, IsIn, MinLength, MaxLength } from 'class-validator';
+import { IsString, IsIn, IsObject, MinLength, MaxLength } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { PROVIDER_TYPES } from '@opsly/shared';
 
@@ -14,5 +14,6 @@ export class CreateProviderConnectionDto {
   name: string;
 
   @ApiProperty({ description: 'Provider-specific credentials' })
+  @IsObject()
   credentials: Record<string, string>;
 }
