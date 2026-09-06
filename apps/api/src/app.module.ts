@@ -1,6 +1,8 @@
 import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
+import { RateLimitMiddleware } from './common/middleware/rate-limit.middleware';
+import { SecurityHeadersMiddleware } from './common/middleware/security-headers.middleware';
 import { CommonModule } from './common/common.module';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
@@ -54,4 +56,10 @@ import { SettingsModule } from './settings/settings.module';
     SettingsModule,
   ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer
+      .apply(SecurityHeadersMiddleware, RateLimitMiddleware)
+      .forRoutes('*');
+  }
+}
