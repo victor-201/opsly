@@ -35,6 +35,15 @@
 - Production probes — PASS (T-040 E2E 5/5, T-041 monitoring 10/10)
 - Database — healthy, 25 models in sync
 
+## Live Middleware Verification (after wiring fix)
+
+Probe `probe-middleware.mjs` (in-container):
+- `X-RateLimit-Limit: 100` + `X-RateLimit-Remaining` decrementing — PASS
+- 130 rapid requests to one path → `429` observed — PASS
+- `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`,
+  `Referrer-Policy: strict-origin-when-cross-origin` headers present — PASS
+- Health endpoint still returns `200` under rate limit — PASS
+
 ## Remaining Known Gaps (accepted, documented, non-blocking)
 
 - Real provider API keys not available in this environment — live provider calls validated
