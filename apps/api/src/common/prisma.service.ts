@@ -6,8 +6,9 @@ export class PrismaService
   extends PrismaClient
   implements OnModuleInit, OnModuleDestroy
 {
-  maxRetries = 10;
+  maxRetries = 60;
   baseDelayMs = 1000;
+  maxDelayMs = 5000;
 
   async onModuleInit() {
     for (let attempt = 1; attempt <= this.maxRetries; attempt++) {
@@ -18,7 +19,10 @@ export class PrismaService
         if (attempt === this.maxRetries) {
           throw err;
         }
-        const delay = this.baseDelayMs * 2 ** (attempt - 1);
+        const delay = Math.min(
+          this.baseDelayMs * 2 ** (attempt - 1),
+          this.maxDelayMs,
+        );
         const detail =
           err instanceof Error ? err.message : String(err);
         console.warn(
