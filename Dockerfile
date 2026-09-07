@@ -17,6 +17,8 @@ RUN pnpm install --frozen-lockfile
 COPY . .
 
 RUN node node_modules/.bin/prisma generate --schema=packages/database/prisma/schema.prisma
+RUN cd packages/shared && node ../../node_modules/.bin/tsc
+RUN cd packages/provider-core && node ../../node_modules/.bin/tsc
 RUN cd apps/api && node ../../node_modules/.bin/nest build
 RUN cd apps/web && node ../../node_modules/.bin/vite build
 
