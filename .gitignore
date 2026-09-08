@@ -43,6 +43,14 @@ packages/database/prisma/migrations/**/migration_lock.toml
 # Turbo
 .turbo/
 
+# Working / planning artifacts (kept local, never committed)
+RULES.md
+TASK.md
+PROMPT.md
+ARCHITECTURE.md
+PLAN.md
+skills/
+
 # Temporary
 tmp/
 temp/
