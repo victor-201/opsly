@@ -16,6 +16,19 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  web:
+    build: .
+    command: ["sh", "-c", "node apps/web/server/serve.mjs"]
+    ports:
+      - "5173:5173"
+    environment:
+      - NODE_ENV=production
+      - WEB_PORT=5173
+      - API_UPSTREAM=http://api:3000
+    depends_on:
+      - api
+    restart: unless-stopped
+
   db:
     image: postgres:16-alpine
     ports:

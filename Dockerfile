@@ -38,6 +38,7 @@ COPY --from=builder /app/apps/api/package.json ./apps/api/
 COPY --from=builder /app/apps/api/dist ./apps/api/dist
 COPY --from=builder /app/apps/web/package.json ./apps/web/
 COPY --from=builder /app/apps/web/dist ./apps/web/dist
+COPY --from=builder /app/apps/web/server ./apps/web/server
 
 RUN node node_modules/.bin/prisma generate --schema=packages/database/prisma/schema.prisma
 
