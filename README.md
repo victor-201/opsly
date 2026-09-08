@@ -160,7 +160,7 @@ opsly/
 │   ├── provider-core/        # @opsly/provider-core — adapter interface + 5 adapters
 │   └── database/             # @opsly/database — Prisma schema, migrations
 ├── docs/                     # 30-phase specification + audit documentation
-├── docker-compose.yml        # Production compose (api + db)
+├── docker-compose.yml        # Production compose (api + web + db)
 ├── Dockerfile                # Multi-stage production image
 ├── turbo.json                # Turborepo config
 └── pnpm-workspace.yaml       # Monorepo workspace definitions
@@ -240,26 +240,38 @@ pnpm dev
 ## Production Deployment
 
 ```bash
-# Build the multi-stage production image
-docker compose build api
+# Build the multi-stage production images (API + web)
+docker compose build
 
-# Start the API + database
-docker compose up -d
+# Start the full stack (API, web, database)
+docker compose up -d --build
 
 # Verify health
 curl http://localhost:3000/api/v1/health/live
 # => {"status":"ok"}
-curl http://localhost:3000/api/v1/health/ready
+curl http://localhost:5173/api/v1/health/ready
 # => {"status":"ok","checks":{"database":"ok"}}
 ```
 
-The API container applies `prisma db push` at boot and exposes:
+Services exposed by `docker compose`:
+
+| Service | Container | Host URL | Purpose |
+|---------|-----------|----------|---------|
+| `db` | `opsly-db-1` | `localhost:5434` | PostgreSQL 16 (volume-backed) |
+| `api` | `opsly-api-1` | `http://localhost:3000` | NestJS API; applies `prisma db push` at boot |
+| `web` | `opsly-web-1` | `http://localhost:5173` | Built React SPA + proxy `/api` → `api:3000` |
+
+The `web` service is a small static server (`apps/web/server/serve.mjs`) that serves the
+production build of the dashboard and reverse-proxies `/api/*` requests to the `api`
+container, so the SPA needs no separate CORS configuration.
+
+API endpoints worth knowing:
 
 | Endpoint | Purpose |
 |----------|---------|
 | `/api/v1/health/live` | Liveness probe |
 | `/api/v1/health/ready` | Readiness probe (checks DB) |
-| `/api/docs` | Swagger UI |
+| `/api/docs` | Swagger UI (API container) |
 
 See [docs/22-deployment/DEPLOYMENT.md](docs/22-deployment/DEPLOYMENT.md) for the full
 deployment record and rollback path.
