@@ -249,7 +249,7 @@ docker compose up -d --build
 # Verify health
 curl http://localhost:3000/api/v1/health/live
 # => {"status":"ok"}
-curl http://localhost:5173/api/v1/health/ready
+curl http://localhost:5174/api/v1/health/ready
 # => {"status":"ok","checks":{"database":"ok"}}
 ```
 
@@ -259,11 +259,13 @@ Services exposed by `docker compose`:
 |---------|-----------|----------|---------|
 | `db` | `opsly-db-1` | `localhost:5434` | PostgreSQL 16 (volume-backed) |
 | `api` | `opsly-api-1` | `http://localhost:3000` | NestJS API; applies `prisma db push` at boot |
-| `web` | `opsly-web-1` | `http://localhost:5173` | Built React SPA + proxy `/api` → `api:3000` |
+| `web` | `opsly-web-1` | `http://localhost:5174` | Built React SPA + proxy `/api` → `api:3000` |
 
 The `web` service is a small static server (`apps/web/server/serve.mjs`) that serves the
 production build of the dashboard and reverse-proxies `/api/*` requests to the `api`
-container, so the SPA needs no separate CORS configuration.
+container, so the SPA needs no separate CORS configuration. The web port is published on
+host `5174` to avoid clashing with any locally-running Vite dev server that commonly owns
+`5173`.
 
 API endpoints worth knowing:
 

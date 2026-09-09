@@ -10,7 +10,7 @@ services:
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/opsly
       - JWT_SECRET=${JWT_SECRET:-your-secret-key-here}
       - ENCRYPTION_KEY=${ENCRYPTION_KEY:-0000000000000000000000000000000000000000000000000000000000000000}
-      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:5173}
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:5174}
     depends_on:
       db:
         condition: service_healthy
@@ -20,7 +20,7 @@ services:
     build: .
     command: ["sh", "-c", "node apps/web/server/serve.mjs"]
     ports:
-      - "5173:5173"
+      - "5174:5173"
     environment:
       - NODE_ENV=production
       - WEB_PORT=5173
