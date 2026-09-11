@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import type { AuthUser, OrgRef, Role } from './types';
 
 interface AuthState {
@@ -19,6 +19,32 @@ interface AuthState {
   removeOrganization: (id: string) => void;
   updateTokens: (accessToken: string, refreshToken: string) => void;
   clear: () => void;
+}
+
+/**
+ * Storage wrapper that never lets persisted state crash the app at boot.
+ * Corrupt, partial or legacy localStorage entries are discarded on read.
+ */
+function safeLocalStorage() {
+  return {
+    getItem(name: string): string | null {
+      try {
+        const raw = localStorage.getItem(name);
+        if (!raw) return null;
+        JSON.parse(raw); // validate JSON is parseable
+        return raw;
+      } catch {
+        try { localStorage.removeItem(name); } catch { /* ignore */ }
+        return null;
+      }
+    },
+    setItem(name: string, value: string) {
+      try { localStorage.setItem(name, value); } catch { /* ignore */ }
+    },
+    removeItem(name: string) {
+      try { localStorage.removeItem(name); } catch { /* ignore */ }
+    },
+  };
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -50,7 +76,7 @@ export const useAuthStore = create<AuthState>()(
           activeOrgId: null,
         }),
     }),
-    { name: 'opsly-auth' },
+    { name: 'opsly-auth', storage: createJSONStorage(safeLocalStorage) },
   ),
 );
 
