@@ -54,22 +54,33 @@ export function ProvidersPage() {
   const [providerType, setProviderType] = useState<ProviderType>('render');
   const [name, setName] = useState('');
   const [credentials, setCredentials] = useState<Record<string, string>>({});
+  const [customVars, setCustomVars] = useState<{ id: string; key: string; value: string }[]>([]);
   const [toDelete, setToDelete] = useState<ProviderConnection | null>(null);
 
   const openModal = () => {
     setProviderType('render');
     setName('');
     setCredentials({});
+    setCustomVars([]);
     setOpen(true);
   };
 
   const fields = CREDENTIAL_FIELDS[providerType] ?? [];
-  const fieldsComplete = fields.every((f) => credentials[f.key]?.trim()) && name.trim();
+  const customValid = customVars.every(
+    (r) => (r.key.trim() && r.value.trim()) || (!r.key.trim() && !r.value.trim()),
+  );
+  const fieldsComplete =
+    fields.every((f) => credentials[f.key]?.trim()) && name.trim() && customValid;
 
   const submit = async () => {
     if (!fieldsComplete) return;
     try {
-      await connectMutation.mutateAsync({ providerType, name: name.trim(), credentials });
+      const merged = { ...credentials };
+      for (const r of customVars) {
+        const k = r.key.trim();
+        if (k && r.value.trim()) merged[k] = r.value.trim();
+      }
+      await connectMutation.mutateAsync({ providerType, name: name.trim(), credentials: merged });
       toast.success('Provider connected', `${titleCase(providerType)} connection created`);
       setOpen(false);
     } catch (err) {
@@ -183,7 +194,7 @@ export function ProvidersPage() {
               <button
                 key={t}
                 type="button"
-                onClick={() => { setProviderType(t); setCredentials({}); }}
+                onClick={() => { setProviderType(t); setCredentials({}); setCustomVars([]); }}
                 className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition ${
                   providerType === t
                     ? 'border-brand-500 bg-brand-50 text-brand-700'
@@ -210,6 +221,66 @@ export function ProvidersPage() {
               />
             </Field>
           ))}
+
+          <div className="border-t border-border pt-4">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-medium text-foreground">Additional variables</p>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() =>
+                  setCustomVars((prev) => [
+                    ...prev,
+                    { id: crypto.randomUUID(), key: '', value: '' },
+                  ])
+                }
+              >
+                <IconPlus width={14} height={14} /> Add variable
+              </Button>
+            </div>
+            <p className="mt-1 text-xs text-muted">
+              Add any extra key/value this provider needs (e.g. a connection string or extra secret).
+            </p>
+            {customVars.length > 0 && (
+              <div className="mt-3 space-y-2">
+                {customVars.map((v) => (
+                  <div key={v.id} className="flex items-center gap-2">
+                    <Input
+                      className="w-1/2"
+                      placeholder="Variable name"
+                      value={v.key}
+                      onChange={(e) =>
+                        setCustomVars((prev) =>
+                          prev.map((x) => (x.id === v.id ? { ...x, key: e.target.value } : x)),
+                        )
+                      }
+                      autoComplete="off"
+                    />
+                    <Input
+                      className="flex-1"
+                      type="password"
+                      placeholder="Value"
+                      value={v.value}
+                      onChange={(e) =>
+                        setCustomVars((prev) =>
+                          prev.map((x) => (x.id === v.id ? { ...x, value: e.target.value } : x)),
+                        )
+                      }
+                      autoComplete="off"
+                    />
+                    <button
+                      type="button"
+                      aria-label="Remove variable"
+                      onClick={() => setCustomVars((prev) => prev.filter((x) => x.id !== v.id))}
+                      className="shrink-0 rounded-md p-1.5 text-muted hover:bg-surface-100 hover:text-danger-600"
+                    >
+                      <IconTrash width={16} height={16} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </Modal>
 
