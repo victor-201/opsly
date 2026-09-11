@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import { Sidebar } from '../components/layout/Sidebar';
+import { TopNav } from '../components/layout/TopNav';
 import { OrgSwitcher } from '../components/layout/OrgSwitcher';
 import { UserMenu } from '../components/layout/UserMenu';
 import { ToastViewport } from '../components/ui/ToastViewport';
@@ -28,6 +29,8 @@ export function DashboardLayout() {
           </div>
           <UserMenu />
         </header>
+
+        <TopNav />
 
         <main className="flex-1 px-4 py-6 sm:px-6 lg:px-8">
           <Outlet />
