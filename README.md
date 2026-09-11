@@ -8,9 +8,9 @@ Monitor, manage, and analyze applications deployed across multiple cloud provide
 from a single unified interface.
 
 ![Version](https://img.shields.io/badge/version-0.1.0-blue)
-![License](https://img.shields.io/badge/license-MIT-green)
 ![Monorepo](https://img.shields.io/badge/monorepo-pnpm%20%2B%20Turborepo-orange)
 ![Stack](https://img.shields.io/badge/stack-NestJS%20%7C%20React%20%7C%20PostgreSQL-important)
+![Frontend](https://img.shields.io/badge/frontend-React%20%2B%20Vite%20%2B%20Tailwind-blueviolet)
 
 </div>
 
@@ -31,6 +31,7 @@ from a single unified interface.
   - [Run Development](#run-development)
 - [Production Deployment](#production-deployment)
 - [API Documentation](#api-documentation)
+- [Frontend](#frontend)
 - [Testing](#testing)
 - [Chat / AI Tools](#chat--ai-tools)
 - [Supported Providers](#supported-providers)
@@ -73,8 +74,8 @@ traced to evidence. See [Documentation](#documentation).
 - **Observability** — liveness/readiness health endpoints, structured logging, and
   scheduled background jobs.
 - **Swagger/OpenAPI** — auto-generated, interactive API documentation.
-- **React dashboard** — overview, applications, topology, resources, deployments,
-  monitoring, alerts, incidents, providers, chat, and audit views.
+- **React dashboard** — 16 RBAC-gated pages, 16 reusable Tailwind UI components,
+  CSS-variable theming, toast notifications, and React Query-powered data fetching.
 
 ---
 
@@ -87,8 +88,9 @@ services later.
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                        React Web App                        │
-│                  (Dashboard, Topology, Chat)                │
+│                     React Web App (SPA)                     │
+│   Tailwind 3.4 · React Query · Zustand · React Router 6    │
+│   16 pages · 16 UI components · 27 feature hooks · RBAC    │
 └───────────────────────────┬─────────────────────────────────┘
                             │ HTTP / JSON (REST + OpenAPI)
 ┌───────────────────────────▼─────────────────────────────────┐
@@ -122,7 +124,8 @@ services later.
 |-------|------------|
 | **Language** | TypeScript 5.x (strict) |
 | **API** | NestJS 10 (Express) |
-| **Frontend** | React + Vite |
+| **Frontend** | React 18 + Vite 5 + Tailwind CSS 3.4 |
+| **State** | Zustand 4 (auth/ui) + React Query 5 (server) |
 | **ORM** | Prisma 5 + PostgreSQL 16 |
 | **Auth** | JWT + Passport (JWT strategy) |
 | **Validation** | class-validator + class-transformer (whitelist + forbidNonWhitelisted) |
@@ -130,8 +133,8 @@ services later.
 | **Docs** | Swagger / OpenAPI |
 | **Scheduling** | @nestjs/schedule (cron) |
 | **Build** | Turborepo + pnpm 9 workspaces |
-| **Tests** | Vitest |
-| **Docker** | Multi-stage build, Docker Compose |
+| **Tests** | Vitest (34 unit tests + integration) |
+| **Docker** | Multi-stage build, Docker Compose (API + Web + DB) |
 
 ---
 
@@ -140,30 +143,38 @@ services later.
 ```
 opsly/
 ├── apps/
-│   ├── api/                  # NestJS API (Modular Monolith)
-│   │   ├── src/
-│   │   │   ├── auth/         # Authentication, JWT, RBAC guards
-│   │   │   ├── users/        # User management
-│   │   │   ├── organizations/# Organization + membership
-│   │   │   ├── providers/    # Provider registry, connections, credentials
-│   │   │   ├── resources/    # Resource discovery & lifecycle
-│   │   │   ├── applications/ # Application graph & resource mapping
-│   │   │   ├── monitoring/   # Scheduler, health checks, alerts
-│   │   │   ├── incidents/    # Incident management
-│   │   │   ├── chat/         # 10 deterministic chat tools
-│   │   │   ├── audit/        # Audit log
-│   │   │   └── ...           # 24 modules total
-│   │   └── test/unit/        # Unit tests
-│   └── web/                  # React dashboard (Vite)
+│   ├── api/                     # NestJS API (Modular Monolith)
+│   │   ├── src/                 # 24 domain modules
+│   │   │   ├── auth/            # Authentication, JWT, RBAC guards
+│   │   │   ├── users/           # User management
+│   │   │   ├── organizations/   # Organization + membership
+│   │   │   ├── providers/       # Provider registry, connections, credentials
+│   │   │   ├── resources/       # Resource discovery & lifecycle
+│   │   │   ├── applications/    # Application graph & resource mapping
+│   │   │   ├── monitoring/      # Scheduler, health checks, alerts
+│   │   │   ├── incidents/       # Incident management
+│   │   │   ├── chat/            # 10 deterministic chat tools
+│   │   │   ├── audit/           # Audit log
+│   │   │   └── ...              # 24 modules total
+│   │   └── test/unit/           # 34 unit tests (6 spec files)
+│   └── web/                     # React dashboard (Vite)
+│       ├── src/
+│       │   ├── pages/           # 16 RBAC-gated pages
+│       │   ├── components/ui/   # 16 reusable Tailwind components
+│       │   ├── hooks/           # 27 feature hooks (React Query)
+│       │   ├── lib/             # permissions, theme, toast, api
+│       │   └── guards/          # RequireAuth, RequirePermission, ActiveOrgGate
+│       ├── server/              # Docker static server + API proxy
+│       └── postcss.config.js    # Tailwind PostCSS pipeline
 ├── packages/
-│   ├── shared/               # @opsly/shared — types, PROVIDER_TYPES, enums
-│   ├── provider-core/        # @opsly/provider-core — adapter interface + 5 adapters
-│   └── database/             # @opsly/database — Prisma schema, migrations
-├── docs/                     # 30-phase specification + audit documentation
-├── docker-compose.yml        # Production compose (api + web + db)
-├── Dockerfile                # Multi-stage production image
-├── turbo.json                # Turborepo config
-└── pnpm-workspace.yaml       # Monorepo workspace definitions
+│   ├── shared/                  # @opsly/shared — types, PROVIDER_TYPES, enums
+│   ├── provider-core/           # @opsly/provider-core — adapter interface + 5 adapters
+│   └── database/                # @opsly/database — Prisma schema, migrations
+├── docs/                        # 30-phase specification + audit documentation
+├── docker-compose.yml           # Production compose (api + web + db)
+├── Dockerfile                   # Multi-stage production image (API + web build)
+├── turbo.json                   # Turborepo config
+└── pnpm-workspace.yaml          # Monorepo workspace definitions
 ```
 
 ---
@@ -173,7 +184,6 @@ opsly/
 - **Node.js** ≥ 22
 - **pnpm** ≥ 9 (`corepack enable`)
 - **Docker** + Docker Compose (for PostgreSQL / production)
-- **PostgreSQL** 16 (local dev alternative to Docker)
 
 ---
 
@@ -206,7 +216,7 @@ ENCRYPTION_KEY=replace-with-a-random-64-char-hex-string
 
 ### Database Setup
 
-Start PostgreSQL (option A — Docker):
+Start PostgreSQL (Docker):
 
 ```bash
 docker compose up -d db          # publishes host port 5434 -> container 5432
@@ -214,8 +224,6 @@ docker compose up -d db          # publishes host port 5434 -> container 5432
 
 Then set `DATABASE_URL` in `.env` to `postgresql://postgres:postgres@127.0.0.1:5434/opsly`
 (5432 on the host is avoided because common local Postgres installs own it).
-
-Or use an existing local PostgreSQL and point `DATABASE_URL` in `.env`.
 
 Then prepare the schema:
 
@@ -227,7 +235,7 @@ pnpm db:migrate    # Apply migrations (or `pnpm db:push` for dev sync)
 ### Run Development
 
 ```bash
-# Start the API (NestJS) and web (React) with hot-reload
+# Build shared packages first, then start API + web with hot-reload
 pnpm dev
 ```
 
@@ -240,32 +248,31 @@ pnpm dev
 ## Production Deployment
 
 ```bash
-# Build the multi-stage production images (API + web)
+# Build all production images (API + web)
 docker compose build
 
 # Start the full stack (API, web, database)
-docker compose up -d --build
+docker compose up -d
 
 # Verify health
 curl http://localhost:3000/api/v1/health/live
 # => {"status":"ok"}
-curl http://localhost:5174/api/v1/health/ready
+curl http://localhost:3000/api/v1/health/ready
 # => {"status":"ok","checks":{"database":"ok"}}
 ```
 
 Services exposed by `docker compose`:
 
-| Service | Container | Host URL | Purpose |
-|---------|-----------|----------|---------|
+| Service | Container | Host Port | Purpose |
+|---------|-----------|-----------|---------|
 | `db` | `opsly-db-1` | `localhost:5434` | PostgreSQL 16 (volume-backed) |
-| `api` | `opsly-api-1` | `http://localhost:3000` | NestJS API; applies `prisma db push` at boot |
-| `web` | `opsly-web-1` | `http://localhost:5174` | Built React SPA + proxy `/api` → `api:3000` |
+| `api` | `opsly-api-1` | `localhost:3000` | NestJS API; applies `prisma db push` at boot |
+| `web` | `opsly-web-1` | `localhost:5174` | Built React SPA + reverse proxy `/api` → `api:3000` |
 
-The `web` service is a small static server (`apps/web/server/serve.mjs`) that serves the
-production build of the dashboard and reverse-proxies `/api/*` requests to the `api`
-container, so the SPA needs no separate CORS configuration. The web port is published on
-host `5174` to avoid clashing with any locally-running Vite dev server that commonly owns
-`5173`.
+The `web` service uses a lightweight static server (`apps/web/server/serve.mjs`) that
+serves the production build of the React dashboard and reverse-proxies `/api/*` requests
+to the `api` container. This keeps the SPA same-origin so no CORS configuration is needed
+for the web client.
 
 API endpoints worth knowing:
 
@@ -273,10 +280,7 @@ API endpoints worth knowing:
 |----------|---------|
 | `/api/v1/health/live` | Liveness probe |
 | `/api/v1/health/ready` | Readiness probe (checks DB) |
-| `/api/docs` | Swagger UI (API container) |
-
-See [docs/22-deployment/DEPLOYMENT.md](docs/22-deployment/DEPLOYMENT.md) for the full
-deployment record and rollback path.
+| `/api/docs` | Swagger UI |
 
 ---
 
@@ -286,12 +290,67 @@ Interactive OpenAPI/Swagger docs are served at `/api/docs` when the API is runni
 
 - http://localhost:3000/api/docs
 
-The API uses the prefix `/api/v1` and covers these groups (see
-[docs/04-api/API_SPECIFICATION.md](docs/04-api/API_SPECIFICATION.md) for the full contract):
+The API uses the prefix `/api/v1` and covers these resource groups:
 
 `auth` · `users` · `organizations` · `memberships` · `provider-connections` · `resources`
 · `applications` · `relations` · `domains` · `deployments` · `health` · `metrics` · `logs`
 · `alerts` · `incidents` · `sync` · `chat` · `audit` · `notifications` · `monitoring`
+· `settings`
+
+---
+
+## Frontend
+
+The React dashboard is a single-page application built with **React 18 + Vite 5 +
+Tailwind CSS 3.4 + TypeScript**. It uses React Query for server-state management and
+Zustand for client-state (auth, UI).
+
+### Pages (16)
+
+| Route | Page | Access |
+|-------|------|--------|
+| `/login` | Login | Public |
+| `/register` | Register | Public |
+| `/org/setup` | Organization setup | Public |
+| `/dashboard` | Dashboard (stats + recent resources) | Any role |
+| `/applications` | Applications list + create modal | `application:read` |
+| `/applications/:id` | Application detail (edit/delete/link resources) | `application:read` |
+| `/resources` | Resources list (search, filter by provider/type/status) | `resource:read` |
+| `/resources/:id` | Resource detail (overview, deployments, metrics, logs tabs) | `resource:read` |
+| `/providers` | Provider connections (connect/remove) | `provider:read` |
+| `/alerts` | Alerts (acknowledge/resolve) | `alert:read` |
+| `/incidents` | Incidents list | `incident:read` |
+| `/incidents/:id` | Incident detail (status transitions, notes) | `incident:read` |
+| `/chat` | AI Chat (select tool, execute, view results) | `chat:use` |
+| `/audit` | Audit log (filter by user, method, path) | `audit:read` |
+| `/settings` | Org settings (info, members, danger zone) | `settings:manage` |
+| `/forbidden` | 403 Forbidden | Any role |
+
+### UI Components (16)
+
+`Button` · `Badge` · `Card` · `DataTable` (with actions column) · `Modal` ·
+`ConfirmDialog` · `Tabs` · `EmptyState` · `ErrorState` · `Spinner` · `StatCard` ·
+`PageHeader` · `Alert` · `fields` (Input/Select/TextArea) · `icons` (40+ icons) ·
+`ToastViewport`
+
+### Hooks (27)
+
+**Queries (13):** `useApplications`, `useApplication`, `useResources`, `useResource`,
+`useResourceLite`, `useProviders`, `useAlerts`, `useIncidents`, `useIncident`,
+`useAuditLogs`, `useChatTools`, `useOrganizations`, `useOrganization`.
+
+**Mutations (14):** `useCreateApplication`, `useUpdateApplication`,
+`useDeleteApplication`, `useLinkResource`, `useUnlinkResource`, `useConnectProvider`,
+`useDeleteProvider`, `useDeleteResource`, `useAcknowledgeAlert`, `useResolveAlert`,
+`useUpdateIncidentStatus`, `useAddIncidentNote`, `useExecuteChatTool`,
+`useDeleteOrganization`.
+
+### Theming
+
+The design system uses CSS custom properties (`--primary-*`, `--surface-*`, `--success-*`,
+etc.) defined in `src/index.css` and extended via `tailwind.config.js`. Changing a few
+color variables restyles the entire app. Semantic tokens are also exposed through
+`lib/theme.ts` for component-level badge/tone styling.
 
 ---
 
@@ -299,14 +358,19 @@ The API uses the prefix `/api/v1` and covers these groups (see
 
 ```bash
 pnpm test              # Run all tests via Turborepo
-pnpm --filter @opsly/api test:unit      # API unit tests
-pnpm --filter @opsly/api test:integration  # API integration tests
-# or directly
+pnpm test:unit         # Unit tests only
+pnpm test:integration  # Integration tests only
+
+pnpm --filter @opsly/api test:unit
+pnpm --filter @opsly/web typecheck     # Frontend type-check
+
+# Or directly
 cd apps/api && npx vitest run
 ```
 
-- **32 unit tests** across auth, providers, chat, monitoring, and middleware.
-- Runtime probes included in the repo for repeatable production verification.
+- **34 unit tests** across 6 spec files (auth, providers, chat, monitoring, prisma, app module).
+- Runtime probe scripts (`probe-*.mjs`) included in the repo root for repeatable
+  production verification.
 
 ---
 
@@ -360,6 +424,8 @@ To add a new provider, implement `ProviderAdapter` in
 - **Rate limiting** — 100 requests/min per IP+path, returns `429` when exceeded.
 - **RBAC** — 4 roles and 17 permissions enforced by guards; strict tenant isolation.
 - **Secrets** — `.env` is gitignored; only `.env.example` is committed.
+- **Working artifacts** — `RULES.md`, `TASK.md`, `PROMPT.md`, `ARCHITECTURE.md`,
+  `PLAN.md`, and `skills/` are gitignored (local working files, not committed).
 - See [docs/13-security/SECURITY_RBAC.md](docs/13-security/SECURITY_RBAC.md).
 
 ---
@@ -386,6 +452,8 @@ The repository follows a 30-phase specification-driven lifecycle. Key documents 
 | RCA / Rollback | [docs/26-rollback/RCA.md](docs/26-rollback/RCA.md) |
 | Final Audit | [docs/27-final-audit/FINAL_AUDIT.md](docs/27-final-audit/FINAL_AUDIT.md) |
 | Release Approval | [docs/28-release-approval/RELEASE_APPROVAL.md](docs/28-release-approval/RELEASE_APPROVAL.md) |
+| Official Production | [docs/29-official-production/OFFICIAL_PRODUCTION.md](docs/29-official-production/OFFICIAL_PRODUCTION.md) |
+| Completion | [docs/30-completion/COMPLETION.md](docs/30-completion/COMPLETION.md) |
 
 ---
 
@@ -395,11 +463,13 @@ From the monorepo root (`package.json`):
 
 | Script | Description |
 |--------|-------------|
-| `pnpm dev` | Start API + web with hot-reload |
+| `pnpm dev` | Build shared packages, then start API + web with hot-reload |
 | `pnpm build` | Build all workspaces (Turborepo) |
 | `pnpm lint` | Lint all workspaces |
 | `pnpm typecheck` | Type-check all workspaces |
 | `pnpm test` | Test all workspaces |
+| `pnpm test:unit` | Unit tests only |
+| `pnpm test:integration` | Integration tests only |
 | `pnpm db:migrate` | Run Prisma dev migration |
 | `pnpm db:deploy` | Apply migrations (production) |
 | `pnpm db:generate` | Generate Prisma Client |
@@ -415,6 +485,7 @@ From the monorepo root (`package.json`):
 - [x] Monitoring, alerts, incidents, audit (T-028)
 - [x] Deterministic chat assistant (T-030)
 - [x] Production deployment v0.1.0 (T-038–T-046)
+- [x] Full frontend rebuild — Tailwind design system, 16 pages, RBAC (T-047–T-051)
 - [ ] Authorized live provider credential validation
 - [ ] Horizontal scaling (multi-instance rate limiting)
 - [ ] CI/CD pipeline (currently manual via Docker Compose)
@@ -423,11 +494,11 @@ From the monorepo root (`package.json`):
 
 ## License
 
-© 2026 OPSLY. This project is private and not yet licensed for public distribution.
+This project is private and not yet licensed for public distribution.
 Contact the maintainers for usage terms.
 
 ---
 
 <div align="center">
-  <sub>Built with NestJS · React · Prisma · PostgreSQL · Turborepo</sub>
+  <sub>Built with NestJS · React · Tailwind CSS · Prisma · PostgreSQL · Turborepo</sub>
 </div>
