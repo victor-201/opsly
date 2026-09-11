@@ -12,7 +12,7 @@ export class OrganizationsService {
     const existing = await this.prisma.organization.findUnique({ where: { slug } });
     if (existing) throw new ForbiddenException('Organization slug already exists');
 
-    return this.prisma.organization.create({
+    const org = await this.prisma.organization.create({
       data: {
         name: dto.name,
         slug,
@@ -22,6 +22,13 @@ export class OrganizationsService {
       },
       include: { memberships: true },
     });
+
+    return {
+      id: org.id,
+      name: org.name,
+      slug: org.slug,
+      role: (org.memberships.find((m) => m.userId === userId) ?? org.memberships[0]).role,
+    };
   }
 
   async findAll(userId: string) {

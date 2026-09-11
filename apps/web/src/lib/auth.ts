@@ -56,12 +56,14 @@ export const useAuthStore = create<AuthState>()(
       organizations: [],
       activeOrgId: null,
       setSession: ({ accessToken, refreshToken, user, organizations = [] }) =>
-        set({ accessToken, refreshToken, user, organizations }),
-      setOrganizations: (organizations) => set({ organizations }),
+        set({ accessToken, refreshToken, user, organizations: normalizeOrgs(organizations) }),
+      setOrganizations: (organizations) => set({ organizations: normalizeOrgs(organizations) }),
       setActiveOrgId: (activeOrgId) => set({ activeOrgId }),
       removeOrganization: (id) =>
         set((state) => {
-          const organizations = state.organizations.filter((o) => o.id !== id);
+          const organizations = normalizeOrgs(
+            state.organizations.filter((o) => o.id !== id),
+          );
           const activeOrgId =
             state.activeOrgId === id ? (organizations[0]?.id ?? null) : state.activeOrgId;
           return { organizations, activeOrgId };
@@ -76,7 +78,14 @@ export const useAuthStore = create<AuthState>()(
           activeOrgId: null,
         }),
     }),
-    { name: 'opsly-auth', storage: createJSONStorage(safeLocalStorage) },
+    {
+      name: 'opsly-auth',
+      storage: createJSONStorage(safeLocalStorage),
+      merge: (persisted, current) => {
+        const merged = { ...current, ...(persisted as Partial<AuthState> | null | undefined) };
+        return { ...merged, organizations: normalizeOrgs(merged.organizations) };
+      },
+    },
   ),
 );
 
@@ -90,4 +99,15 @@ export function selectActiveOrg(state: AuthState): OrgRef | null {
 
 export function activeRole(state: AuthState): Role | null {
   return selectActiveOrg(state)?.role ?? null;
+}
+
+/**
+ * Every membership in this app is self-created as an owner (there is no invite
+ * flow yet, and members are only ever produced by `create`). Legacy sessions
+ * persisted before the create endpoint returned a flat `role` stored `undefined`
+ * here, which broke every permission check. Default the missing role to owner.
+ */
+function normalizeOrgs(orgs: OrgRef[] | null | undefined): OrgRef[] {
+  if (!orgs) return [];
+  return orgs.map((o) => ({ ...o, role: o.role ?? 'owner' }));
 }
