@@ -16,6 +16,7 @@ interface AuthState {
   }) => void;
   setOrganizations: (orgs: OrgRef[]) => void;
   setActiveOrgId: (id: string) => void;
+  removeOrganization: (id: string) => void;
   updateTokens: (accessToken: string, refreshToken: string) => void;
   clear: () => void;
 }
@@ -32,6 +33,13 @@ export const useAuthStore = create<AuthState>()(
         set({ accessToken, refreshToken, user, organizations }),
       setOrganizations: (organizations) => set({ organizations }),
       setActiveOrgId: (activeOrgId) => set({ activeOrgId }),
+      removeOrganization: (id) =>
+        set((state) => {
+          const organizations = state.organizations.filter((o) => o.id !== id);
+          const activeOrgId =
+            state.activeOrgId === id ? (organizations[0]?.id ?? null) : state.activeOrgId;
+          return { organizations, activeOrgId };
+        }),
       updateTokens: (accessToken, refreshToken) => set({ accessToken, refreshToken }),
       clear: () =>
         set({

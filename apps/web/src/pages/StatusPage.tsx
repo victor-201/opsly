@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { Button } from '../components/ui/Button';
 import { IconLock, IconActivity, IconShieldCheck } from '../components/ui/icons';
 import { useIsAuthenticated } from '../hooks/useSession';
@@ -13,9 +14,9 @@ export function NotFoundPage() {
         <p className="text-4xl font-bold text-foreground">404</p>
         <p className="mt-1 text-muted">The page you're looking for doesn't exist.</p>
       </div>
-      <a href={authed ? '/dashboard' : '/login'}>
+      <Link to={authed ? '/dashboard' : '/login'}>
         <Button variant="outline">Back home</Button>
-      </a>
+      </Link>
     </div>
   );
 }
@@ -31,11 +32,11 @@ export function ForbiddenPage() {
         <p className="text-4xl font-bold text-foreground">403</p>
         <p className="mt-1 text-muted">Your role doesn't have access to this page.</p>
       </div>
-      <a href={authed ? '/dashboard' : '/login'}>
+      <Link to={authed ? '/dashboard' : '/login'}>
         <Button variant="outline">
           <IconShieldCheck width={14} height={14} /> Back home
         </Button>
-      </a>
+      </Link>
     </div>
   );
 }

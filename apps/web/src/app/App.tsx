@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { ErrorBoundary } from '../components/ErrorBoundary';
 import { DashboardLayout } from '../layouts/DashboardLayout';
 import { RequireAuth, ActiveOrgGate } from '../guards/RequireAuth';
 import { RequirePermission } from '../guards/RequirePermission';
@@ -25,73 +26,77 @@ import { PERMISSIONS } from '../lib/permissions';
 export function App() {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
-        <Route path="/org/setup" element={<OrgSetupPage />} />
-        <Route path="/forbidden" element={<ForbiddenPage />} />
+      <ErrorBoundary>
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+          <Route path="/org/setup" element={<OrgSetupPage />} />
+          <Route path="/forbidden" element={<ForbiddenPage />} />
 
-        <Route path="/" element={<RequireAuth><ActiveOrgGate><DashboardLayout /></ActiveOrgGate></RequireAuth>}>
-          <Route index element={<Navigate to="/dashboard" replace />} />
-          <Route path="dashboard" element={<DashboardPage />} />
+          <Route path="/" element={<RequireAuth><ActiveOrgGate><DashboardLayout /></ActiveOrgGate></RequireAuth>}>
+            <Route index element={<Navigate to="/dashboard" replace />} />
+            <Route path="dashboard" element={<DashboardPage />} />
 
-          <Route path="applications" element={<ApplicationsPage />} />
-          <Route path="applications/:id" element={<ApplicationDetailPage />} />
+            <Route path="applications" element={<ApplicationsPage />} />
+            <Route path="applications/:id" element={<ApplicationDetailPage />} />
 
-          <Route path="resources" element={<ResourcesPage />} />
-          <Route path="resources/:id" element={<ResourceDetailPage />} />
+            <Route path="resources" element={<ResourcesPage />} />
+            <Route path="resources/:id" element={<ResourceDetailPage />} />
 
-          <Route
-            path="providers"
-            element={
-              <RequirePermission permission={PERMISSIONS.providerRead}>
-                <ProvidersPage />
-              </RequirePermission>
-            }
-          />
+            <Route
+              path="providers"
+              element={
+                <RequirePermission permission={PERMISSIONS.providerRead}>
+                  <ProvidersPage />
+                </RequirePermission>
+              }
+            />
 
-          <Route
-            path="alerts"
-            element={
-              <RequirePermission permission={PERMISSIONS.alertsRead}>
-                <AlertsPage />
-              </RequirePermission>
-            }
-          />
+            <Route
+              path="alerts"
+              element={
+                <RequirePermission permission={PERMISSIONS.alertsRead}>
+                  <AlertsPage />
+                </RequirePermission>
+              }
+            />
 
-          <Route path="incidents" element={<IncidentsPage />} />
-          <Route path="incidents/:id" element={<IncidentDetailPage />} />
+            <Route path="incidents" element={<IncidentsPage />} />
+            <Route path="incidents/:id" element={<IncidentDetailPage />} />
 
-          <Route
-            path="chat"
-            element={
-              <RequirePermission permission={PERMISSIONS.chatUse}>
-                <ChatPage />
-              </RequirePermission>
-            }
-          />
+            <Route
+              path="chat"
+              element={
+                <RequirePermission permission={PERMISSIONS.chatUse}>
+                  <ChatPage />
+                </RequirePermission>
+              }
+            />
 
-          <Route
-            path="audit"
-            element={
-              <RequirePermission permission={PERMISSIONS.auditRead}>
-                <AuditPage />
-              </RequirePermission>
-            }
-          />
+            <Route
+              path="audit"
+              element={
+                <RequirePermission permission={PERMISSIONS.auditRead}>
+                  <AuditPage />
+                </RequirePermission>
+              }
+            />
 
-          <Route
-            path="settings"
-            element={
-              <RequirePermission permission={PERMISSIONS.settingsManage}>
-                <SettingsPage />
-              </RequirePermission>
-            }
-          />
-        </Route>
+            <Route
+              path="settings"
+              element={
+                <RequirePermission permission={PERMISSIONS.settingsManage}>
+                  <SettingsPage />
+                </RequirePermission>
+              }
+            />
 
-        <Route path="*" element={<NotFoundPage />} />
-      </Routes>
+            <Route path="*" element={<NotFoundPage />} />
+          </Route>
+
+          <Route path="*" element={<NotFoundPage />} />
+        </Routes>
+      </ErrorBoundary>
     </BrowserRouter>
   );
 }

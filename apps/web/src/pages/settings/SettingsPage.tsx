@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Button } from '../../components/ui/Button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/Card';
@@ -10,6 +11,7 @@ import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 import { IconBuilding, IconAlertTriangle } from '../../components/ui/icons';
 import { useOrganization, useDeleteOrganization } from '../../hooks/useHooks';
 import { useActiveOrg, useRole } from '../../hooks/useSession';
+import { useAuthStore } from '../../lib/auth';
 import { useToast } from '../../lib/toast';
 import { formatDateTime, titleCase } from '../../lib/format';
 
@@ -26,6 +28,8 @@ export function SettingsPage() {
   const deleteMutation = useDeleteOrganization();
   const role = useRole();
   const toast = useToast();
+  const navigate = useNavigate();
+  const removeOrganization = useAuthStore((s) => s.removeOrganization);
   const [confirmOpen, setConfirmOpen] = useState(false);
 
   const isOwner = role === 'owner';
@@ -38,8 +42,9 @@ export function SettingsPage() {
   const doDelete = async () => {
     try {
       await deleteMutation.mutateAsync(org.id);
+      removeOrganization(org.id);
       toast.success('Organization deleted');
-      window.location.href = '/org/setup';
+      navigate('/org/setup', { replace: true });
     } catch (err) {
       toast.error('Delete failed', err instanceof Error ? err.message : undefined);
     }

@@ -8,7 +8,7 @@ export function RequirePermission({ permission, children }: { permission: Permis
   const role = useRole();
 
   if (!hasPermission(role, permission)) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/forbidden" replace />;
   }
   return <>{children}</>;
 }
