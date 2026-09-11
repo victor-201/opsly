@@ -19,26 +19,33 @@ import { PERMISSIONS } from '../../lib/permissions';
 import { formatDateTime, titleCase } from '../../lib/format';
 import type { ProviderConnection, ProviderType } from '../../lib/types';
 
-const CREDENTIAL_FIELDS: Record<string, { key: string; label: string; type?: string }[]> = {
+interface CredentialField {
+  key: string;
+  label: string;
+  type?: string;
+  required?: boolean;
+  hint?: string;
+}
+
+const CREDENTIAL_FIELDS: Record<string, CredentialField[]> = {
   render: [
-    { key: 'apiKey', label: 'API Key', type: 'password' },
-    { key: 'webhookSecret', label: 'Webhook Secret', type: 'password' },
+    { key: 'apiKey', label: 'API Key', type: 'password', required: true, hint: 'Your Render API key (dashboard.render.com → Account Settings → API Keys).' },
+    { key: 'webhookSecret', label: 'Webhook Secret', type: 'password', hint: 'Optional — used to verify Render webhook signatures.' },
   ],
   cloudflare: [
-    { key: 'apiToken', label: 'API Token', type: 'password' },
-    { key: 'accountId', label: 'Account ID' },
+    { key: 'apiToken', label: 'API Token', type: 'password', required: true, hint: 'A scoped Cloudflare API token with Pages edit permissions.' },
+    { key: 'accountId', label: 'Account ID', required: true, hint: 'In the dashboard: https://dash.cloudflare.com/<ACCOUNT_ID>/...' },
   ],
   neon: [
-    { key: 'apiKey', label: 'API Key', type: 'password' },
-    { key: 'projectId', label: 'Project ID' },
+    { key: 'apiKey', label: 'API Key', type: 'password', required: true, hint: 'Your Neon API key (console.neon.tech → Account → API keys).' },
   ],
   upstash: [
-    { key: 'email', label: 'Email' },
-    { key: 'apiKey', label: 'API Key', type: 'password' },
+    { key: 'apiToken', label: 'API Token', type: 'password', required: true, hint: 'The token shown in your Upstash database settings (REST section).' },
+    { key: 'restUrl', label: 'REST URL', required: true, hint: 'Your Upstash REST endpoint, e.g. https://xxxx.upstash.io.' },
   ],
   'mongodb-atlas': [
-    { key: 'publicKey', label: 'Public Key' },
-    { key: 'privateKey', label: 'Private Key', type: 'password' },
+    { key: 'apiKey', label: 'API Key', type: 'password', required: true, hint: 'The private key of an Atlas API key (Project → Access Manager → API Keys).' },
+    { key: 'projectId', label: 'Project ID', required: true, hint: 'The group ID in your Atlas API URL: /api/atlas/v1.0/groups/<PROJECT_ID>/...' },
   ],
 };
 
@@ -69,8 +76,9 @@ export function ProvidersPage() {
   const customValid = customVars.every(
     (r) => (r.key.trim() && r.value.trim()) || (!r.key.trim() && !r.value.trim()),
   );
-  const fieldsComplete =
-    fields.every((f) => credentials[f.key]?.trim()) && name.trim() && customValid;
+  const requiredComplete =
+    fields.filter((f) => f.required).every((f) => credentials[f.key]?.trim()) || fields.length === 0;
+  const fieldsComplete = requiredComplete && name.trim() && customValid;
 
   const submit = async () => {
     if (!fieldsComplete) return;
@@ -212,7 +220,7 @@ export function ProvidersPage() {
           </Field>
 
           {fields.map((f) => (
-            <Field key={f.key} label={f.label} required>
+            <Field key={f.key} label={f.label} required={f.required} hint={f.hint}>
               <Input
                 type={f.type ?? 'text'}
                 value={credentials[f.key] ?? ''}
