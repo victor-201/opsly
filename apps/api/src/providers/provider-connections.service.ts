@@ -25,18 +25,28 @@ export class ProviderConnectionsService {
       },
     });
 
+    const credentials = Object.fromEntries(
+      Object.entries(dto.credentials)
+        .map(([k, v]) => [k, (v ?? '').trim()])
+        .filter(([, v]) => v !== ''),
+    );
+
     try {
-      const result = await adapter.validateConnection(dto.credentials);
+      const result = await adapter.validateConnection(credentials);
 
       if (!result.valid) {
         await this.prisma.providerConnection.update({
           where: { id: connection.id },
           data: { status: 'invalid', lastSyncError: result.error },
         });
-        throw new BadRequestException(`Provider validation failed: ${result.error}`);
+        const hint =
+          /^API returned (400|401|403)$/.test(result.error || '')
+            ? 'Verify the credential is valid and has no extra spaces, quotes or newlines.'
+            : 'Check that the entered credentials are correct.';
+        throw new BadRequestException(`Provider validation failed: ${result.error}. ${hint}`);
       }
 
-      const encrypted = this.credentials.encrypt(dto.credentials);
+      const encrypted = this.credentials.encrypt(credentials);
 
       await this.prisma.credential.create({
         data: {

@@ -83,10 +83,15 @@ export function ProvidersPage() {
   const submit = async () => {
     if (!fieldsComplete) return;
     try {
-      const merged = { ...credentials };
+      const merged: Record<string, string> = {};
+      for (const [k, v] of Object.entries(credentials)) {
+        const value = v?.trim();
+        if (value) merged[k] = value;
+      }
       for (const r of customVars) {
         const k = r.key.trim();
-        if (k && r.value.trim()) merged[k] = r.value.trim();
+        const value = r.value.trim();
+        if (k && value) merged[k] = value;
       }
       await connectMutation.mutateAsync({ providerType, name: name.trim(), credentials: merged });
       toast.success('Provider connected', `${titleCase(providerType)} connection created`);

@@ -120,9 +120,7 @@ export class AuthService {
         secret: this.config.get('JWT_SECRET'),
       });
 
-      const tokenHash = await bcrypt.hash(refreshToken, 10);
-
-      const storedToken = await this.prisma.refreshToken.findFirst({
+      const storedTokens = await this.prisma.refreshToken.findMany({
         where: {
           userId: payload.sub,
           revoked: false,
@@ -130,18 +128,20 @@ export class AuthService {
         },
       });
 
-      if (!storedToken) {
-        throw new UnauthorizedException('Invalid refresh token');
+      let matched: (typeof storedTokens)[number] | null = null;
+      for (const token of storedTokens) {
+        if (await bcrypt.compare(refreshToken, token.tokenHash)) {
+          matched = token;
+          break;
+        }
       }
 
-      const valid = await bcrypt.compare(refreshToken, storedToken.tokenHash);
-
-      if (!valid) {
+      if (!matched) {
         throw new UnauthorizedException('Invalid refresh token');
       }
 
       await this.prisma.refreshToken.update({
-        where: { id: storedToken.id },
+        where: { id: matched.id },
         data: { revoked: true },
       });
 
