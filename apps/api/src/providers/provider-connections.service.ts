@@ -40,10 +40,12 @@ export class ProviderConnectionsService {
           data: { status: 'invalid', lastSyncError: result.error },
         });
         const hint =
-          /^API returned (400|401|403) \(/.test(result.error || '')
-            ? 'Verify the credential is valid and has no extra spaces, quotes or newlines.'
-            : 'Check that the entered credentials are correct.';
-        throw new BadRequestException(`Provider validation failed: ${result.error}. ${hint}`);
+          /^API returned (401|403) \(/.test(result.error || '')
+            ? ' Verify the credential is valid and has no extra spaces, quotes or newlines.'
+            : /^API returned 400 \(/.test(result.error || '')
+              ? ''
+              : ' Check that the entered credentials are correct.';
+        throw new BadRequestException(`Provider validation failed: ${result.error}.${hint}`);
       }
 
       const encrypted = this.credentials.encrypt(credentials);
