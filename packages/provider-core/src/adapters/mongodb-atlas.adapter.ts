@@ -43,10 +43,15 @@ export class MongoAtlasAdapter implements ProviderAdapter {
         return { valid: true, accountInfo: { id: credentials.projectId, name: 'MongoDB Atlas' } };
       }
 
-      return { valid: false, error: `API returned ${response.status}` };
+      return { valid: false, error: await this.errorDetail(response) };
     } catch (error) {
       return { valid: false, error: String(error) };
     }
+  }
+
+  private async errorDetail(response: Response): Promise<string> {
+    const body = await response.text().catch(() => '');
+    return `API returned ${response.status}${body ? `: ${body.slice(0, 240)}` : ''}`;
   }
 
   async discoverResources(): Promise<NormalizedResource[]> {
