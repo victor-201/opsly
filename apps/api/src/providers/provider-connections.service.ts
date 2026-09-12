@@ -3,6 +3,7 @@ import { PrismaService } from '../common/prisma.service';
 import { ProviderRegistry } from './provider-registry.service';
 import { CredentialService } from './credential.service';
 import { CreateProviderConnectionDto } from './dto/create-provider-connection.dto';
+import { PreviewOrganizationsDto } from './dto/preview-organizations.dto';
 import { ProviderType } from '@opsly/shared';
 
 @Injectable()
@@ -115,5 +116,26 @@ export class ProviderConnectionsService {
       credential.iv,
       credential.authTag,
     );
+  }
+
+  async listOrganizations(dto: PreviewOrganizationsDto): Promise<{ id: string; name: string }[]> {
+    const adapter = this.registry.getAdapter(dto.providerType as ProviderType) as unknown as
+      | {
+          listOrganizations?: (
+            credentials: Record<string, string>,
+          ) => Promise<{ ok: boolean; organizations: { id: string; name: string }[]; error?: string }>;
+        }
+      | undefined;
+
+    if (!adapter?.listOrganizations) {
+      throw new BadRequestException('This provider does not expose an organization picker');
+    }
+
+    const result = await adapter.listOrganizations(dto.credentials);
+    if (!result.ok) {
+      throw new BadRequestException(result.error || 'Failed to load organizations');
+    }
+
+    return result.organizations;
   }
 }

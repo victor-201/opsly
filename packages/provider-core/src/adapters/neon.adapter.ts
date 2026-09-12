@@ -81,6 +81,32 @@ export class NeonAdapter implements ProviderAdapter {
     }
   }
 
+  async listOrganizations(
+    credentials: ProviderCredentials,
+  ): Promise<{ ok: boolean; organizations: { id: string; name: string }[]; error?: string }> {
+    try {
+      const response = await fetch('https://console.neon.tech/api/v2/users/me/organizations', {
+        headers: {
+          'Authorization': `Bearer ${credentials.apiKey}`,
+          'Accept': 'application/json',
+        },
+      });
+      if (!response.ok) {
+        return { ok: false, organizations: [], error: `Neon API returned ${response.status}` };
+      }
+      const data = await response.json();
+      return {
+        ok: true,
+        organizations: (data.organizations ?? []).map((o: { id: string; name?: string }) => ({
+          id: o.id,
+          name: o.name || o.id,
+        })),
+      };
+    } catch (error) {
+      return { ok: false, organizations: [], error: String(error) };
+    }
+  }
+
   private projectsUrl(): string {
     return this.orgId
       ? `https://console.neon.tech/api/v2/projects?org_id=${encodeURIComponent(this.orgId)}`

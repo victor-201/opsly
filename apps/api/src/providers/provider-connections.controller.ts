@@ -14,6 +14,7 @@ import { RequirePermission } from '../common/decorators/require-permission.decor
 import { CurrentOrgId } from '../common/decorators/current-org-id.decorator';
 import { ProviderConnectionsService } from './provider-connections.service';
 import { CreateProviderConnectionDto } from './dto/create-provider-connection.dto';
+import { PreviewOrganizationsDto } from './dto/preview-organizations.dto';
 
 @ApiTags('Provider Connections')
 @ApiBearerAuth()
@@ -21,6 +22,13 @@ import { CreateProviderConnectionDto } from './dto/create-provider-connection.dt
 @Controller('provider-connections')
 export class ProviderConnectionsController {
   constructor(private service: ProviderConnectionsService) {}
+
+  @Post('organizations')
+  @RequirePermission('provider:connect')
+  @ApiOperation({ summary: 'List selectable organizations for a provider' })
+  async listOrganizations(@Body() dto: PreviewOrganizationsDto) {
+    return this.service.listOrganizations(dto);
+  }
 
   @Post()
   @RequirePermission('provider:connect')

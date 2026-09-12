@@ -4,17 +4,18 @@ import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { DataTable, type Column } from '../../components/ui/DataTable';
 import { Modal } from '../../components/ui/Modal';
-import { Input, Field } from '../../components/ui/fields';
+import { Input, Select, Field } from '../../components/ui/fields';
 import { PageLoader } from '../../components/ui/Spinner';
 import { ErrorState } from '../../components/ui/ErrorState';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { StatusPill, Badge } from '../../components/ui/Badge';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 import { ProviderLogo } from '../../components/providers/ProviderLogo';
-import { IconLayers, IconPlus, IconTrash } from '../../components/ui/icons';
+import { IconLayers, IconPlus, IconTrash, IconRefresh } from '../../components/ui/icons';
 import { useProviders, useConnectProvider, useDeleteProvider } from '../../hooks/useHooks';
 import { useCan } from '../../hooks/useSession';
 import { useToast } from '../../lib/toast';
+import { api } from '../../lib/api';
 import { PERMISSIONS } from '../../lib/permissions';
 import { formatDateTime, titleCase } from '../../lib/format';
 import type { ProviderConnection, ProviderType } from '../../lib/types';
@@ -63,6 +64,8 @@ export function ProvidersPage() {
   const [name, setName] = useState('');
   const [credentials, setCredentials] = useState<Record<string, string>>({});
   const [customVars, setCustomVars] = useState<{ id: string; key: string; value: string }[]>([]);
+  const [orgOptions, setOrgOptions] = useState<{ id: string; name: string }[]>([]);
+  const [loadingOrgs, setLoadingOrgs] = useState(false);
   const [toDelete, setToDelete] = useState<ProviderConnection | null>(null);
 
   const openModal = () => {
@@ -70,7 +73,27 @@ export function ProvidersPage() {
     setName('');
     setCredentials({});
     setCustomVars([]);
+    setOrgOptions([]);
     setOpen(true);
+  };
+
+  const loadOrganizations = async () => {
+    const apiKey = credentials.apiKey?.trim();
+    if (!apiKey) return;
+    setLoadingOrgs(true);
+    try {
+      const data = await api.post<{ id: string; name: string }[]>('/provider-connections/organizations', {
+        providerType: 'neon',
+        credentials: { apiKey },
+      });
+      setOrgOptions(data ?? []);
+      toast.success('Organizations loaded', `Found ${(data ?? []).length} organization(s)`);
+    } catch (err) {
+      setOrgOptions([]);
+      toast.error('Failed to load organizations', err instanceof Error ? err.message : undefined);
+    } finally {
+      setLoadingOrgs(false);
+    }
   };
 
   const fields = CREDENTIAL_FIELDS[providerType] ?? [];
@@ -208,7 +231,7 @@ export function ProvidersPage() {
               <button
                 key={t}
                 type="button"
-                onClick={() => { setProviderType(t); setCredentials({}); setCustomVars([]); }}
+                onClick={() => { setProviderType(t); setCredentials({}); setCustomVars([]); setOrgOptions([]); }}
                 className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition ${
                   providerType === t
                     ? 'border-brand-500 bg-brand-50 text-brand-700'
@@ -225,16 +248,43 @@ export function ProvidersPage() {
             <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={`My ${titleCase(providerType)} account`} />
           </Field>
 
-          {fields.map((f) => (
-            <Field key={f.key} label={f.label} required={f.required} hint={f.hint}>
-              <Input
-                type={f.type ?? 'text'}
-                value={credentials[f.key] ?? ''}
-                onChange={(e) => setField(f.key, e.target.value)}
-                autoComplete="off"
-              />
-            </Field>
-          ))}
+          {fields.map((f) =>
+            providerType === 'neon' && f.key === 'orgId' ? (
+              <Field key={f.key} label={f.label} required={f.required} hint={f.hint}>
+                <div className="flex gap-2">
+                  <Select
+                    value={credentials.orgId ?? ''}
+                    onChange={(e) => setField(f.key, e.target.value)}
+                  >
+                    <option value="">Auto-detect (recommended)</option>
+                    {orgOptions.map((o) => (
+                      <option key={o.id} value={o.id}>
+                        {o.name} — {o.id}
+                      </option>
+                    ))}
+                  </Select>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={loadOrganizations}
+                    loading={loadingOrgs}
+                    disabled={!credentials.apiKey?.trim()}
+                  >
+                    <IconRefresh width={14} height={14} /> Load
+                  </Button>
+                </div>
+              </Field>
+            ) : (
+              <Field key={f.key} label={f.label} required={f.required} hint={f.hint}>
+                <Input
+                  type={f.type ?? 'text'}
+                  value={credentials[f.key] ?? ''}
+                  onChange={(e) => setField(f.key, e.target.value)}
+                  autoComplete="off"
+                />
+              </Field>
+            ),
+          )}
 
           <div className="border-t border-border pt-4">
             <div className="flex items-center justify-between">
