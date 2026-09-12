@@ -38,7 +38,7 @@ const CREDENTIAL_FIELDS: Record<string, CredentialField[]> = {
   ],
   neon: [
     { key: 'apiKey', label: 'API Key', type: 'password', required: true, hint: 'Your Neon API key (console.neon.tech → Account → API keys).' },
-    { key: 'orgId', label: 'Organization ID', hint: 'Only for personal API keys (org keys don\'t need it). Find it at Neon → Organization → Settings → General information.' },
+    { key: 'orgId', label: 'Organization ID', hint: 'Optional — auto-detected when connecting with a personal API key. Set it only to pick a specific organization.' },
   ],
   upstash: [
     { key: 'apiToken', label: 'API Token', type: 'password', required: true, hint: 'The token shown in your Upstash database settings (REST section).' },

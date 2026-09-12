@@ -28,25 +28,57 @@ export class NeonAdapter implements ProviderAdapter {
     this.apiKey = credentials.apiKey;
     this.orgId = credentials.orgId || undefined;
 
-    const response = await fetch(this.projectsUrl(), {
+    const projects = await fetch(this.projectsUrl(), {
       headers: {
         'Authorization': `Bearer ${this.apiKey}`,
         'Accept': 'application/json',
       },
     });
 
-    if (response.ok) {
+    const projectsBody = await projects.text().catch(() => '');
+
+    if (projects.ok) {
       return { valid: true, accountInfo: { id: this.orgId ?? 'neon-account', name: 'Neon Account' } };
     }
 
-    const body = await response.text().catch(() => '');
-    const bodyExcerpt = body ? `: ${body.slice(0, 240)}` : '';
-    const missingOrgId = /org_id is required/i.test(body);
-    const error = missingOrgId
-      ? 'API returned 400 (Neon): this account uses a personal API key. Add your Organization ID (Neon → Organization → Settings → General information) in the Organization ID field.'
-      : `API returned ${response.status} (Neon)${bodyExcerpt}`;
+    if (/org_id is required/i.test(projectsBody)) {
+      const autoOrgId = await this.detectOrgId();
+      if (autoOrgId) {
+        this.orgId = autoOrgId;
+        const retry = await fetch(this.projectsUrl(), {
+          headers: {
+            'Authorization': `Bearer ${this.apiKey}`,
+            'Accept': 'application/json',
+          },
+        });
+        if (retry.ok) {
+          return { valid: true, accountInfo: { id: autoOrgId, name: 'Neon Account' } };
+        }
+      }
+      return {
+        valid: false,
+        error:
+          'API returned 400 (Neon): this account uses a personal API key and no organization could be auto-detected. Add your Organization ID (Neon → Organization → Settings → General information) in the Organization ID field.',
+      };
+    }
 
-    return { valid: false, error };
+    return { valid: false, error: `API returned ${projects.status} (Neon)${projectsBody ? `: ${projectsBody.slice(0, 240)}` : ''}` };
+  }
+
+  private async detectOrgId(): Promise<string | null> {
+    try {
+      const response = await fetch('https://console.neon.tech/api/v2/users/me/organizations', {
+        headers: {
+          'Authorization': `Bearer ${this.apiKey}`,
+          'Accept': 'application/json',
+        },
+      });
+      if (!response.ok) return null;
+      const data = await response.json();
+      return (data.organizations?.[0]?.id as string | undefined) ?? null;
+    } catch {
+      return null;
+    }
   }
 
   private projectsUrl(): string {
